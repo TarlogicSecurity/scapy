@@ -25,17 +25,21 @@ from scapy.data import (
 )
 from scapy.packet import bind_layers, Packet
 from scapy.fields import (
+    BitEnumField,
+    BTMajorServiceClassField,
     BitField,
     XBitField,
     ByteEnumField,
     ByteField,
+    ConditionalField,
     FieldLenField,
     FieldListField,
     FlagsField,
     IntField,
+    LEIntField,
     LEShortEnumField,
     LEShortField,
-    LEIntField,
+    LEThreeBytesField,
     LenField,
     MultipleTypeField,
     NBytesField,
@@ -50,6 +54,7 @@ from scapy.fields import (
     UUIDField,
     XByteField,
     XLE3BytesField,
+    XLEIntField,
     XLELongField,
     XStrLenField,
     XLEShortField,
@@ -90,6 +95,36 @@ class HCI_PHDR_Hdr(Packet):
 
 
 # Real layers
+
+_bluetooth_vendor_broadcom_diagnostic_type = {
+    0x00: "LM sent",
+    0x01: "LM received",
+    0x03: "Memory Access Response to Peek",
+    0x04: "Memory Hex Dump Response",
+    0x0a: "Reported Completed Test",
+    0x11: "Memory Access Response to Poke",
+    0x15: "CPU Load",
+    0x16: "Basic Rate ACL Stats Data",
+    0x17: "EDR ACL Stats Data",
+    0x18: "Received Aux Response",
+    0x1a: "ACL Stats Data (Type 0x1A)",
+    0x1b: "ACL Stats Data (Type 0x1B)",
+    0x1f: "Get Connection Response",
+    0x80: "LE LM Sent",
+    0x81: "LE LM Received",
+    0xb9: "Reset Basic Rate ACL Stats",
+    0xc1: "Get Basic Rate ACL Stats",
+    0xc2: "Get EDR ACL Stats",
+    0xc3: "Get Aux Stats",
+    0xc5: "Get ACL Stats (Type 0x1A)",
+    0xc6: "Get ACL Stats (Type 0x1B)",
+    0xcf: "Get Connection Stats",
+    0xf0: "Toggle LMP Logging",
+    0xf1: "Memory Peek",
+    0xf2: "Memory Poke",
+    0xf3: "Memory Hex Dump",
+    0xf6: "BTMMstr_BBPktTest",
+}
 
 _bluetooth_packet_types = {
     0: "Acknowledgement",
@@ -262,6 +297,161 @@ _bluetooth_features = [
     'reserved4_bit3',
     'extended_features',
 ]
+
+class BT_Mon_Hdr(Packet):
+    """
+    Bluetooth Linux Monitor Transport Header
+    """
+    name = "Bluetooth Linux Monitor Transport Header"
+    fields_desc = [
+        LEShortField("opcode", None),
+        LEShortField("adapter_id", None),
+        LEShortField("len", None)
+    ]
+
+
+class BT_Mon_New_Index(Packet):
+    """
+    Bluetooth Linux Monitor Transport New Index Packet
+    """
+    name = "Bluetooth Linux Monitor Transport New Index Packet"
+    fields_desc = [
+        ByteEnumField("bus", 0, {
+            0x00: "BR/EDR",
+            0x01: "AMP"
+        }),
+        ByteEnumField("type", 0, {
+            0x00: "Virtual",
+            0x01: "USB",
+            0x02: "PC Card",
+            0x03: "UART",
+            0x04: "RS232",
+            0x05: "PCI",
+            0x06: "SDIO"
+        }),
+        LEMACField("addr", None),
+        StrFixedLenField("name", None, 8)
+    ]
+
+
+class BT_Mon_Delete_Index(Packet):
+    """
+    Bluetooth Linux Monitor Transport Delete Index Packet
+    """
+    name = "Bluetooth Linux Monitor Transport Delete Index Packet"
+
+
+class BT_Mon_Open_Index(Packet):
+    """
+    Bluetooth Linux Monitor Transport Open Index Packet
+    """
+    name = "Bluetooth Linux Monitor Transport Open Index Packet"
+
+
+class BT_Mon_Close_Index(Packet):
+    """
+    Bluetooth Linux Monitor Transport Close Index Packet
+    """
+    name = "Bluetooth Linux Monitor Transport Close Index Packet"
+
+
+class BT_Mon_Index_Info(Packet):
+    """
+    Bluetooth Linux Monitor Transport Index Info Packet
+    """
+    name = "Bluetooth Linux Monitor Transport Index Info Packet"
+    fields_desc = [
+        LEMACField("addr", None),
+        XLEShortField("manufacturer", None)
+    ]
+
+
+class BT_Mon_System_Note(Packet):
+    """
+    Bluetooth Linux Monitor Transport System Note Packet
+    """
+    name = "Bluetooth Linux Monitor Transport System Note Packet"
+    fields_desc = [
+        StrNullField("note", None)
+    ]
+
+
+class BCM_Vendor_Diagnostic_Hdr(Packet):
+    """
+    Bluetooth Broadcom Vendor Diagnostic Packet Header
+    """
+    name = "Bluetooth Broadcom Vendor Diagnostic Packet Header"
+    fields_desc = [
+        ByteEnumField("type", None, _bluetooth_vendor_broadcom_diagnostic_type)
+    ]
+
+
+class BCM_Vendor_Diagnostic_Lmp_Header(Packet):
+    """
+    Bluetooth Broadcom Vendor Diagnostic LMP Packet Header
+    """
+    name = "Bluetooth Broadcom Vendor Diagnostic LMP Packet Header"
+    fields_desc = [
+        XLEIntField("clock", None),
+        XLEIntField("mac_low", None),
+        ConditionalField(LEThreeBytesField("padding", None),
+                         lambda packet: packet.underlayer.type == 0x01)
+    ]
+
+
+class BT_DM1_Hdr(Packet):
+    """
+    Bluetooth DM1 Header
+    """
+    name = "Bluetooth DM1 Packet Header"
+    fields_desc = [
+        BitField("len", None, -5),
+        BitField("flow", None, 1),
+        BitEnumField("llid", None, -2, {
+            0x00: "Reserved",
+            0x01: "Continuation fragment of an L2CAP message (ACL-U)",
+            0x02: "Start of an L2CAP message or no fragmentation (ACL-U)",
+            0x03: "LMP message (ACL-C)"
+        })
+    ]
+
+
+class LMP_Hdr(Packet):
+    """
+    LMP Message Header
+    """
+    name = "LMP message header"
+    fields_desc = [
+        BitField("opcode", None, -7),
+        BitField("tid", None, 1)
+    ]
+
+
+class LMP_au_rand(Packet):
+    """
+    LMP au_rand Message
+    """
+    name = "LMP au rand message"
+    fields_desc = [NBytesField("random_number", None, 16)]
+
+
+class LMP_sres(Packet):
+    """
+    LMP sres Message
+    """
+    name = "LMP sres message"
+    fields_desc = [LEIntField("authentication_response", None)]
+
+
+class LMP_not_accepted(Packet):
+    """
+    LMP not_accepted Message
+    """
+    name = "LMP not accepted message"
+    fields_desc = [
+        ByteField("opcode", None),
+        ByteField("error", None)
+    ]
 
 
 class HCI_Hdr(Packet):
@@ -1038,6 +1228,19 @@ class EIR_IncompleteList16BitServiceUUIDs(EIR_CompleteList16BitServiceUUIDs):
     name = "Incomplete list of 16-bit service UUIDs"
 
 
+class EIR_CompleteList32BitServiceUUIDs(EIR_Element):
+    name = 'Complete list of 32-bit service UUIDs'
+    fields_desc = [
+        # https://www.bluetooth.com/specifications/assigned-numbers
+        FieldListField('svc_uuids', None, XLEIntField('uuid', 0),
+                       length_from=EIR_Element.length_from)
+    ]
+
+
+class EIR_IncompleteList32BitServiceUUIDs(EIR_CompleteList32BitServiceUUIDs):
+    name = 'Incomplete list of 32-bit service UUIDs'
+
+
 class EIR_CompleteList128BitServiceUUIDs(EIR_Element):
     name = "Complete list of 128-bit service UUIDs"
     fields_desc = [
@@ -1065,6 +1268,45 @@ class EIR_ShortenedLocalName(EIR_CompleteLocalName):
 class EIR_TX_Power_Level(EIR_Element):
     name = "TX Power Level"
     fields_desc = [SignedByteField("level", 0)]
+
+
+class EIR_ClassOfDevice(EIR_Element):
+    name = "Class of device"
+    fields_desc = [
+        BitField("fixed", 0b00, 2),
+        BitField("minor_device_class", 0, 6),
+        BitField("major_device_class", 0, 5),
+        BTMajorServiceClassField("major_service_classes", 0)
+    ]
+
+
+class EIR_SecureSimplePairingHashC192(EIR_Element):
+    name = "Secure Simple Pairing Hash C-192"
+    fields_desc = [NBytesField("hash", 0, 16)]
+
+
+class EIR_SecureSimplePairingRandomizerR192(EIR_Element):
+    name = "Secure Simple Pairing Randomizer R-192"
+    fields_desc = [NBytesField("randomizer", 0, 16)]
+
+
+class EIR_SecurityManagerOOBFlags(EIR_Element):
+    name = "Security Manager Out of Band Flags"
+    fields_desc = [
+        BitField("oob_flags_field", 0, 1),
+        BitField("le_supported", 0, 1),
+        BitField("previously_used", 0, 1),
+        BitField("address_type", 0, 1),
+        BitField("reserved", 0, 4)
+    ]
+
+
+class EIR_PeripheralConnectionIntervalRange(EIR_Element):
+    name = "Peripheral Connection Interval Range"
+    fields_desc = [
+        LEShortField("conn_interval_min", 0xFFFF),
+        LEShortField("conn_interval_max", 0xFFFF)
+    ]
 
 
 class EIR_Manufacturer_Specific_Data(EIR_Element):
@@ -1146,12 +1388,29 @@ class EIR_ServiceData16BitUUID(EIR_Element):
     fields_desc = [
         # https://www.bluetooth.com/specifications/assigned-numbers/16-bit-uuids-for-members
         XLEShortField("svc_uuid", None),
+        StrLenField("service_data", b"", length_from=EIR_Element.length_from)
     ]
 
     def extract_padding(self, s):
         # Needed to end each EIR_Element packet and make PacketListField work.
         plen = EIR_Element.length_from(self) - 2
         return s[:plen], s[plen:]
+
+
+class EIR_ServiceData32BitUUID(EIR_Element):
+    name = "EIR Service Data - 32-bit UUID"
+    fields_desc = [
+        XLEIntField("svc_uuid", None),
+        StrLenField("service_data", b"", length_from=EIR_Element.length_from)
+    ]
+
+
+class EIR_ServiceData128BitUUID(EIR_Element):
+    name = "EIR Service Data - 128-bit UUID"
+    fields_desc = [
+        UUIDField("svc_uuid", None, uuid_fmt=UUIDField.FORMAT_REV),
+        StrLenField("service_data", b"", length_from=EIR_Element.length_from)
+    ]
 
 
 class HCI_Command_Hdr(Packet):
@@ -1204,6 +1463,7 @@ class HCI_Cmd_Inquiry(Packet):
     """
 
     name = "HCI_Inquiry"
+    # TODO: convert to a X3BytesEnumField, _bluetooth_special_laps),
     fields_desc = [XLE3BytesField("lap", 0x9E8B33),
                    ByteField("inquiry_length", 0),
                    ByteField("num_responses", 0)]
@@ -1579,8 +1839,8 @@ class HCI_Cmd_Set_Event_Filter(Packet):
 
 
 class HCI_Cmd_Write_Local_Name(Packet):
-    name = "HCI_Write_Local_Name"
-    fields_desc = [StrFixedLenField('name', '', length=248)]
+    name = "Write Local Name"
+    fields_desc = [StrFixedLenField("name", b"\x00", 248)]
 
 
 class HCI_Cmd_Write_Connect_Accept_Timeout(Packet):
@@ -1777,6 +2037,62 @@ class HCI_Cmd_LE_Long_Term_Key_Request_Negative_Reply(Packet):
     fields_desc = [LEShortField("handle", 0), ]
 
 
+class HCI_Cmd_Read_Remote_Supported_Features(Packet):
+    """
+    Read Remote Supported Features HCI Command
+    """
+    name = "Read Remote Supported Features"
+    fields_desc = [LEShortField("handle", 0)]
+
+
+class HCI_Cmd_Read_Remote_Extended_Features(Packet):
+    """
+    Read Remote Extended Features HCI Command
+    """
+    name = "Read Remote Extended Features"
+    fields_desc = [
+        LEShortField("handle", 0),
+        ByteField("page", 0x00)]
+
+
+class HCI_Cmd_Read_Remote_Version_Information(Packet):
+    """
+    Read Remote Version Information HCI Command
+    """
+    name = "Read Remote Version Information Command"
+    fields_desc = [LEShortField("handle", 0x00)]
+
+
+class HCI_Cmd_Write_Scan_Enable(Packet):
+    """
+    Write Scan Enable HCI Command
+    """
+    name = "Write Scan Enable HCI Command"
+    fields_desc = [ByteField("scan_enable", 0x00)]
+
+
+class HCI_Cmd_Read_Local_Name(Packet):
+    name = "Read Local Name"
+
+
+class HCI_Cmd_Write_Class_Of_Device(Packet):
+    name = "Write Class of Device"
+    fields_desc = [XLE3BytesField("device_class", 0x000000)]
+
+
+
+class HCI_Cmd_Read_Local_Extended_Features(Packet):
+    name = "Read Local Extended Features"
+    fields_desc = [ByteField("page", 0x00)]
+
+
+class HCI_Cmd_Read_Local_Version_Information(Packet):
+    """
+    Read Local Version Information HCI Command
+    """
+    name = "Read Local Version Information"
+
+
 class HCI_Event_Hdr(Packet):
     name = "HCI Event header"
     fields_desc = [XByteField("code", 0),
@@ -1834,6 +2150,13 @@ class HCI_Event_Connection_Complete(Packet):
                    ByteEnumField("encryption_enabled", 0,
                                  {0: "link level encryption disabled",
                                   1: "link level encryption enabled", }), ]
+class HCI_Event_Connect_Complete(Packet):
+    name = "Connect Complete"
+    fields_desc = [ByteEnumField("status", 0, _bluetooth_error_codes),
+                   LEShortField("handle", 0x0100),
+                   LEMACField("bd_addr", None),
+                   ByteField("link_type", 0x00),
+                   ByteField("encryption_enabled", 0x00)]
 
 
 class HCI_Event_Disconnection_Complete(Packet):
@@ -1908,6 +2231,17 @@ class HCI_Event_Command_Complete(Packet):
         return other[HCI_Command_Hdr].opcode == self.opcode
 
 
+class HCI_Cmd_Complete_Read_BD_Addr(Packet):
+    name = "Read BD Addr"
+    fields_desc = [LEMACField("bd_addr", None)]
+
+
+class HCI_Cmd_Complete_LE_Read_White_List_Size(Packet):
+    name = "LE Read White List Size"
+    fields_desc = [ByteField("status", 0),
+                   ByteField("size", 0), ]
+
+
 class HCI_Event_Command_Status(Packet):
     """
     7.7.15 Command Status event
@@ -1953,6 +2287,7 @@ class HCI_Event_Inquiry_Result_With_Rssi(Packet):
     7.7.33 Inquiry Result with RSSI event
     """
     name = "HCI_Inquiry_Result_with_RSSI"
+    # TODO: Probably wrongly implemented, fields not initialized!
     fields_desc = [
         ByteField("num_response", 0x00),
         FieldListField("bd_addr", None, LEMACField,
@@ -2012,6 +2347,91 @@ class HCI_Event_IO_Capability_Response(Packet):
         ByteField('oob_data_present', 0x00),
         ByteField('authentication_requirements', 0x00)
     ]
+
+
+class HCI_Event_Read_Remote_Extended_Features_Complete(Packet):
+    """
+    Read Remote Extended Features Complete HCI Event
+    """
+    name = "Read Remote Extended Features Complete"
+    fields_desc = [
+        ByteEnumField("status", 0, {0: "success"}),
+        LEShortField("handle", 0),
+        ByteField("page", 0x00),
+        ByteField("max_page", 0x00),
+        XLELongField("extended_features", 0)]
+
+
+class HCI_Event_IO_Capability_Response(Packet):
+    """
+    IO Capability Response HCI Event
+    """
+    name = "IO Capability Response Event"
+    fields_desc = [
+        LEMACField("bd_addr", None),
+        ByteField("io_capability", 0x00),
+        ByteField("oob_data_present", 0x00),
+        ByteField("authentication_requirements", 0x00)]
+
+
+class HCI_Event_Read_Remote_Version_Information_Complete(Packet):
+    """
+    Read Remote Version Information Complete HCI Event
+    """
+    name = "Read Remote Version Information Event"
+    fields_desc = [
+        ByteField("status", 0x00),
+        LEShortField("handle", 0x0000),
+        ByteField("version", 0x00),
+        LEShortField("manufacturer_name", 0x0000),
+        LEShortField("subversion", 0x0000)]
+
+
+class HCI_Event_Inquiry_Complete(Packet):
+    """
+    Inquiry Complete HCI Event
+    """
+    name = "HCI Inquiry Complete Event"
+    fields_desc = [
+        ByteEnumField("status", 0, _bluetooth_error_codes)
+    ]
+
+
+class HCI_Cmd_Complete_Read_Local_Name(Packet):
+    name = "Read Local Name"
+    fields_desc = [StrFixedLenField("name", b"\x00", length=248)]
+
+
+class HCI_Cmd_Complete_Read_Local_Extended_Features(Packet):
+    """
+    Read Local Extended Features Complete HCI Event
+    """
+    name = "Read Local Extended Features Complete"
+    fields_desc = [
+        ByteField("page", 0x00),
+        ByteField("max_page", 0x00),
+        XLELongField("extended_features", 0)]
+
+
+class HCI_Cmd_Complete_Read_Local_Version_Information(Packet):
+    """
+    Read Local Version Information HCI Command Complete Event
+    """
+    name = "Read Local Version Information"
+    fields_desc = [
+        ByteField("hci_version", 0),
+        LEShortField("hci_revision", 0),
+        ByteField("lmp_pal_version", 0),
+        LEShortField("manufacturer_name", 0),
+        LEShortField("lmp_pal_subversion", 0)]
+
+
+class HCI_Event_Link_Key_Request(Packet):
+    """
+    Link Key Request HCI Event
+    """
+    name = "Link Key Request Event"
+    fields_desc = [LEMACField("bd_addr", None)]
 
 
 class HCI_Event_LE_Meta(Packet):
@@ -2103,16 +2523,66 @@ class HCI_LE_Meta_Long_Term_Key_Request(Packet):
                    XLEShortField("ediv", 0), ]
 
 
+
+class HCI_Vendor_Broadcom_Hdr(Packet):
+    name = "HCI Broadcom Vendor header"
+    fields_desc = [
+        ByteField("opcode", 0)
+    ]
+
+
+class HCI_Vendor_Broadcom_Set_Diagnostic_Logging(Packet):
+    name = "HCI Broadcom Vendor Set Diagnostic Logging"
+    fields_desc = [
+        ByteField("enable", 0x00)
+    ]
+
+
+# https://elixir.bootlin.com/linux/v6.4.2/source/include/net/bluetooth/hci_mon.h#L34
+bind_layers(BT_Mon_Hdr, BT_Mon_New_Index, opcode=0)
+bind_layers(BT_Mon_Hdr, BT_Mon_Delete_Index, opcode=1)
+bind_layers(BT_Mon_Hdr, HCI_Command_Hdr, opcode=2)
+bind_layers(BT_Mon_Hdr, HCI_Event_Hdr, opcode=3)
+bind_layers(BT_Mon_Hdr, BT_Mon_Open_Index, opcode=8)
+bind_layers(BT_Mon_Hdr, BT_Mon_Close_Index, opcode=9)
+bind_layers(BT_Mon_Hdr, BT_Mon_Index_Info, opcode=10)
+bind_layers(BT_Mon_Hdr, BT_Mon_System_Note, opcode=12)
+bind_layers(BT_Mon_Hdr, BCM_Vendor_Diagnostic_Hdr, opcode=11)
+
+bind_layers(BCM_Vendor_Diagnostic_Hdr, BCM_Vendor_Diagnostic_Lmp_Header, type=0x00)
+bind_layers(BCM_Vendor_Diagnostic_Hdr, BCM_Vendor_Diagnostic_Lmp_Header, type=0x01)
+bind_layers(BCM_Vendor_Diagnostic_Lmp_Header, BT_DM1_Hdr)
+bind_layers(BT_DM1_Hdr, LMP_Hdr, llid=3)
+bind_layers(LMP_Hdr, LMP_au_rand, opcode=11)
+bind_layers(LMP_Hdr, LMP_sres, opcode=12)
+bind_layers(LMP_Hdr, LMP_not_accepted, opcode=4)
+
 bind_layers(HCI_PHDR_Hdr, HCI_Hdr)
 
 bind_layers(HCI_Hdr, HCI_Command_Hdr, type=1)
 bind_layers(HCI_Hdr, HCI_ACL_Hdr, type=2)
 bind_layers(HCI_Hdr, HCI_Event_Hdr, type=4)
+bind_layers(HCI_Hdr, HCI_Vendor_Broadcom_Hdr, type=7)
 bind_layers(HCI_Hdr, conf.raw_layer,)
 
 conf.l2types.register(DLT_BLUETOOTH_HCI_H4, HCI_Hdr)
 conf.l2types.register(DLT_BLUETOOTH_HCI_H4_WITH_PHDR, HCI_PHDR_Hdr)
 
+bind_layers(HCI_Command_Hdr, HCI_Cmd_Connect_Accept_Timeout, opcode=0x0c16)
+bind_layers(HCI_Command_Hdr, HCI_Cmd_LE_Host_Supported, opcode=0x0c6d)
+bind_layers(HCI_Command_Hdr, HCI_Cmd_LE_Read_White_List_Size, opcode=0x200f)
+bind_layers(HCI_Command_Hdr, HCI_Cmd_LE_Clear_White_List, opcode=0x2010)
+bind_layers(HCI_Command_Hdr, HCI_Cmd_LE_Add_Device_To_White_List, opcode=0x2011)  # noqa: E501
+bind_layers(HCI_Command_Hdr, HCI_Cmd_LE_Remove_Device_From_White_List, opcode=0x2012)  # noqa: E501
+bind_layers(HCI_Command_Hdr, HCI_Cmd_LE_Read_Remote_Used_Features, opcode=0x2016)  # noqa: E501
+bind_layers(HCI_Command_Hdr, HCI_Cmd_LE_Start_Encryption_Request, opcode=0x2019)  # noqa: E501
+
+bind_layers(HCI_Command_Hdr, HCI_Cmd_Read_Remote_Version_Information, opcode=0x041d)
+bind_layers(HCI_Command_Hdr, HCI_Cmd_Write_Scan_Enable, opcode=0x0c1a)
+bind_layers(HCI_Command_Hdr, HCI_Cmd_Read_Local_Name, opcode=0x0c14)
+bind_layers(HCI_Command_Hdr, HCI_Cmd_Write_Class_Of_Device, opcode=0x0c24)
+bind_layers(HCI_Command_Hdr, HCI_Cmd_Read_Local_Extended_Features, opcode=0x1004)
+bind_layers(HCI_Command_Hdr, HCI_Cmd_Read_Local_Version_Information, opcode=0x1001)
 
 # 7.1 LINK CONTROL COMMANDS, the OGF is defined as 0x01
 bind_layers(HCI_Command_Hdr, HCI_Cmd_Inquiry, ogf=0x01, ocf=0x0001)
@@ -2219,25 +2689,48 @@ bind_layers(HCI_Event_Hdr, HCI_Event_Read_Remote_Extended_Features_Complete, cod
 bind_layers(HCI_Event_Hdr, HCI_Event_Extended_Inquiry_Result, code=0x2f)
 bind_layers(HCI_Event_Hdr, HCI_Event_IO_Capability_Response, code=0x32)
 bind_layers(HCI_Event_Hdr, HCI_Event_LE_Meta, code=0x3e)
+bind_layers(HCI_Event_Hdr, HCI_Event_Read_Remote_Supported_Features_Complete, code=0x0b)
+bind_layers(HCI_Event_Hdr, HCI_Event_Read_Remote_Extended_Features_Complete, code=0x23)
+bind_layers(HCI_Event_Hdr, HCI_Event_IO_Capability_Response, code=0x32)
+bind_layers(HCI_Event_Hdr, HCI_Event_Read_Remote_Version_Information_Complete, code=0x0c)
+bind_layers(HCI_Event_Hdr, HCI_Event_Inquiry_Result, code=0x02)
+bind_layers(HCI_Event_Hdr, HCI_Event_Inquiry_Result_With_Rssi, code=0x22)
+bind_layers(HCI_Event_Hdr, HCI_Event_Extended_Inquiry_Result, code=0x2f)
+bind_layers(HCI_Event_Hdr, HCI_Event_Inquiry_Complete, code=0x01)
+bind_layers(HCI_Event_Hdr, HCI_Event_Link_Key_Request, code=0x17)
 
 bind_layers(HCI_Event_Command_Complete, HCI_Cmd_Complete_Read_BD_Addr, opcode=0x1009)  # noqa: E501
 bind_layers(HCI_Event_Command_Complete, HCI_Cmd_Complete_LE_Read_White_List_Size, opcode=0x200f)  # noqa: E501
+bind_layers(HCI_Event_Command_Complete, HCI_Cmd_Complete_Read_Local_Name, opcode=0x0c14)  # noqa: E501
+bind_layers(HCI_Event_Command_Complete, HCI_Cmd_Complete_Read_Local_Extended_Features, opcode=0x1004)
+bind_layers(HCI_Event_Command_Complete, HCI_Cmd_Complete_Read_Local_Version_Information, opcode=0x1001)
 
 bind_layers(HCI_Event_LE_Meta, HCI_LE_Meta_Connection_Complete, event=1)
 bind_layers(HCI_Event_LE_Meta, HCI_LE_Meta_Advertising_Reports, event=2)
 bind_layers(HCI_Event_LE_Meta, HCI_LE_Meta_Connection_Update_Complete, event=3)
 bind_layers(HCI_Event_LE_Meta, HCI_LE_Meta_Long_Term_Key_Request, event=5)
 
+bind_layers(HCI_Vendor_Broadcom_Hdr, HCI_Vendor_Broadcom_Set_Diagnostic_Logging, opcode=0xf0)
+
 bind_layers(EIR_Hdr, EIR_Flags, type=0x01)
 bind_layers(EIR_Hdr, EIR_IncompleteList16BitServiceUUIDs, type=0x02)
 bind_layers(EIR_Hdr, EIR_CompleteList16BitServiceUUIDs, type=0x03)
+bind_layers(EIR_Hdr, EIR_CompleteList32BitServiceUUIDs, type=0x05)
+bind_layers(EIR_Hdr, EIR_IncompleteList32BitServiceUUIDs, type=0x04)
 bind_layers(EIR_Hdr, EIR_IncompleteList128BitServiceUUIDs, type=0x06)
 bind_layers(EIR_Hdr, EIR_CompleteList128BitServiceUUIDs, type=0x07)
 bind_layers(EIR_Hdr, EIR_ShortenedLocalName, type=0x08)
 bind_layers(EIR_Hdr, EIR_CompleteLocalName, type=0x09)
 bind_layers(EIR_Hdr, EIR_Device_ID, type=0x10)
 bind_layers(EIR_Hdr, EIR_TX_Power_Level, type=0x0a)
+bind_layers(EIR_Hdr, EIR_ClassOfDevice, type=0x0d)
+bind_layers(EIR_Hdr, EIR_SecureSimplePairingHashC192, type=0x0e)
+bind_layers(EIR_Hdr, EIR_SecureSimplePairingRandomizerR192, type=0x0f)
+bind_layers(EIR_Hdr, EIR_SecurityManagerOOBFlags, type=0x11)
+bind_layers(EIR_Hdr, EIR_PeripheralConnectionIntervalRange, type=0x12)
 bind_layers(EIR_Hdr, EIR_ServiceData16BitUUID, type=0x16)
+bind_layers(EIR_Hdr, EIR_ServiceData32BitUUID, type=0x20)
+bind_layers(EIR_Hdr, EIR_ServiceData128BitUUID, type=0x21)
 bind_layers(EIR_Hdr, EIR_Manufacturer_Specific_Data, type=0xff)
 bind_layers(EIR_Hdr, EIR_Raw)
 

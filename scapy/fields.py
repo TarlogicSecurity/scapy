@@ -3992,3 +3992,27 @@ class MSBExtendedField(BitExtendedField):
     def __init__(self, name, default):
         # type: (str, Optional[Any]) -> None
         BitExtendedField.__init__(self, name, default, extension_bit=7)
+
+
+class BTMajorServiceClassField(FlagsField):
+    '''
+    Defines the Major Service Classes field of the Class of Device EIR as a bit
+    field
+    '''
+
+    def __init__(self, name, default):
+        super().__init__(
+            name, default, -11, [
+                'limited_discoverable_mode',
+                'le_audio',
+                'reserved',
+                'positioning',
+                'networking',
+                'rendering',
+                'capturing',
+                'object_transfer',
+                'audio',
+                'telephony',
+                'information'
+            ]
+        )
