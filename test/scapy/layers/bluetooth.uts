@@ -2,6 +2,17 @@
 
 + Bluetooth tests
 
+= Monitor layers
+# a huge packet with all classes in it!
+pkt = BT_Mon_Hdr()/BT_Mon_New_Index()/BT_Mon_Delete_Index()/BT_Mon_Open_Index()/BT_Mon_Close_Index()/BT_Mon_Index_Info()/BT_Mon_System_Note()
+assert BT_Mon_Hdr in pkt.layers()
+assert BT_Mon_New_Index in pkt.layers()
+assert BT_Mon_Delete_Index in pkt.layers()
+assert BT_Mon_Open_Index in pkt.layers()
+assert BT_Mon_Close_Index in pkt.layers()
+assert BT_Mon_Index_Info in pkt.layers()
+assert BT_Mon_System_Note in pkt.layers()
+
 = HCI layers
 # a huge packet with all classes in it!
 pkt = HCI_ACL_Hdr()/HCI_Cmd_Create_Connection()/HCI_Cmd_Complete_Read_BD_Addr()/HCI_Cmd_Connect_Accept_Timeout()/HCI_Cmd_Disconnect()/HCI_Cmd_LE_Connection_Update()/HCI_Cmd_LE_Create_Connection()/HCI_Cmd_LE_Create_Connection_Cancel()/HCI_Cmd_LE_Host_Supported()/HCI_Cmd_LE_Long_Term_Key_Request_Negative_Reply()/HCI_Cmd_LE_Long_Term_Key_Request_Reply()/HCI_Cmd_LE_Read_Buffer_Size()/HCI_Cmd_LE_Set_Advertise_Enable()/HCI_Cmd_LE_Set_Advertising_Data()/HCI_Cmd_LE_Set_Advertising_Parameters()/HCI_Cmd_LE_Set_Random_Address()/HCI_Cmd_LE_Set_Scan_Enable()/HCI_Cmd_LE_Set_Scan_Parameters()/HCI_Cmd_LE_Start_Encryption_Request()/HCI_Cmd_Authentication_Requested()/HCI_Cmd_Link_Key_Request_Reply()/HCI_Cmd_Read_BD_Addr()/HCI_Cmd_Remote_Name_Request()/HCI_Cmd_Reset()/HCI_Cmd_Set_Connection_Encryption()/HCI_Cmd_Set_Event_Filter()/HCI_Cmd_Set_Event_Mask()/HCI_Command_Hdr()/HCI_Event_Command_Complete()/HCI_Event_Command_Status()/HCI_Event_Connect_Complete()/HCI_Event_Disconnection_Complete()/HCI_Event_Encryption_Change()/HCI_Event_Remote_Name_Request_Complete()/HCI_Event_Hdr()/HCI_Event_LE_Meta()/HCI_Event_Number_Of_Completed_Packets()/HCI_Hdr()/HCI_LE_Meta_Advertising_Reports()/HCI_LE_Meta_Connection_Complete()/HCI_LE_Meta_Connection_Update_Complete()/HCI_LE_Meta_Long_Term_Key_Request()

@@ -38,6 +38,7 @@ from scapy.fields import (
     StrField,
     StrFixedLenField,
     StrLenField,
+    StrNullField,
     UUIDField,
     XByteField,
     XLELongField,
@@ -196,6 +197,72 @@ class BT_Mon_Hdr(Packet):
         LEShortField('opcode', None),
         LEShortField('adapter_id', None),
         LEShortField('len', None)
+    ]
+
+
+class BT_Mon_New_Index(Packet):
+    '''
+    Bluetooth Linux Monitor Transport New Index Packet
+    '''
+    name = 'Bluetooth Linux Monitor Transport New Index Packet'
+    fields_desc = [
+        ByteEnumField('bus', 0, {
+            0x00: "BR/EDR",
+            0x01: "AMP"
+        }),
+        ByteEnumField('type', 0, {
+            0x00: "Virtual",
+            0x01: "USB",
+            0x02: "PC Card",
+            0x03: "UART",
+            0x04: "RS232",
+            0x05: "PCI",
+            0x06: "SDIO"
+        }),
+        LEMACField('addr', None),
+        StrFixedLenField('name', None, 8)
+    ]
+
+
+class BT_Mon_Delete_Index(Packet):
+    '''
+    Bluetooth Linux Monitor Transport Delete Index Packet
+    '''
+    name = 'Bluetooth Linux Monitor Transport Delete Index Packet'
+
+
+class BT_Mon_Open_Index(Packet):
+    '''
+    Bluetooth Linux Monitor Transport Open Index Packet
+    '''
+    name = 'Bluetooth Linux Monitor Transport Open Index Packet'
+
+
+class BT_Mon_Close_Index(Packet):
+    '''
+    Bluetooth Linux Monitor Transport Close Index Packet
+    '''
+    name = 'Bluetooth Linux Monitor Transport Close Index Packet'
+
+
+class BT_Mon_Index_Info(Packet):
+    '''
+    Bluetooth Linux Monitor Transport Index Info Packet
+    '''
+    name = 'Bluetooth Linux Monitor Transport Index Info Packet'
+    fields_desc = [
+        LEMACField('addr', None),
+        XLEShortField('manufacturer', None)
+    ]
+
+
+class BT_Mon_System_Note(Packet):
+    '''
+    Bluetooth Linux Monitor Transport System Note Packet
+    '''
+    name = 'Bluetooth Linux Monitor Transport System Note Packet'
+    fields_desc = [
+        StrNullField('note', None)
     ]
 
 
@@ -1267,6 +1334,16 @@ class HCI_LE_Meta_Long_Term_Key_Request(Packet):
                    StrFixedLenField("rand", None, 8),
                    XLEShortField("ediv", 0), ]
 
+
+# https://elixir.bootlin.com/linux/v6.4.2/source/include/net/bluetooth/hci_mon.h#L34
+bind_layers(BT_Mon_Hdr, BT_Mon_New_Index, opcode=0)
+bind_layers(BT_Mon_Hdr, BT_Mon_Delete_Index, opcode=1)
+bind_layers(BT_Mon_Hdr, HCI_Command_Hdr, opcode=2)
+bind_layers(BT_Mon_Hdr, HCI_Event_Hdr, opcode=3)
+bind_layers(BT_Mon_Hdr, BT_Mon_Open_Index, opcode=8)
+bind_layers(BT_Mon_Hdr, BT_Mon_Close_Index, opcode=9)
+bind_layers(BT_Mon_Hdr, BT_Mon_Index_Info, opcode=10)
+bind_layers(BT_Mon_Hdr, BT_Mon_System_Note, opcode=12)
 
 bind_layers(HCI_PHDR_Hdr, HCI_Hdr)
 
