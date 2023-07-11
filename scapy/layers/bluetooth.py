@@ -44,6 +44,9 @@ from scapy.fields import (
     XStrLenField,
     XLEShortField,
     LEMACField,
+    BTLMPFeaturesField,
+    LEX3BytesField,
+    LEIntField,
 )
 from scapy.supersocket import SuperSocket
 from scapy.sendrecv import sndrcv
@@ -905,7 +908,7 @@ class HCI_Cmd_Read_BD_Addr(Packet):
 
 class HCI_Cmd_Write_Local_Name(Packet):
     name = "Write Local Name"
-    fields_desc = [StrField("name", "")]
+    fields_desc = [StrFixedLenField("name", b"\x00", 248)]
 
 
 class HCI_Cmd_Write_Extended_Inquiry_Response(Packet):
@@ -1084,6 +1087,75 @@ class HCI_Cmd_LE_Long_Term_Key_Request_Reply(Packet):
                    StrFixedLenField("ltk", b'\x00' * 16, 16), ]
 
 
+class HCI_Cmd_Read_Remote_Supported_Features(Packet):
+    """
+    Read Remote Supported Features HCI Command
+    """
+    name = "Read Remote Supported Features"
+    fields_desc = [LEShortField("handle", 0)]
+
+
+class HCI_Cmd_Read_Remote_Extended_Features(Packet):
+    """
+    Read Remote Extended Features HCI Command
+    """
+    name = "Read Remote Extended Features"
+    fields_desc = [
+        LEShortField("handle", 0),
+        ByteField("page", 0x00)]
+
+
+class HCI_Cmd_Read_Remote_Version_Information(Packet):
+    """
+    Read Remote Version Information HCI Command
+    """
+    name = "Read Remote Version Information Command"
+    fields_desc = [LEShortField("handle", 0x00)]
+
+
+class HCI_Cmd_Inquiry(Packet):
+    """
+    Inquiry HCI Command
+    """
+    name = "HCI Inquiry Command"
+    fields_desc = [
+        # TODO: convert to a X3BytesEnumField, _bluetooth_special_laps),
+        LEX3BytesField("lap", 0x9e8b33),
+        ByteField("inquiry_length", 0x07),
+        ByteField("num_responses", 0x00)
+    ]
+
+
+class HCI_Cmd_Write_Scan_Enable(Packet):
+    """
+    Write Scan Enable HCI Command
+    """
+    name = "Write Scan Enable HCI Command"
+    fields_desc = [ByteField("scan_enable", 0x00)]
+
+
+class HCI_Cmd_Read_Local_Name(Packet):
+    name = "Read Local Name"
+
+
+class HCI_Cmd_Write_Class_Of_Device(Packet):
+    name = "Write Class of Device"
+    fields_desc = [LEX3BytesField("device_class", 0x000000)]
+
+
+
+class HCI_Cmd_Read_Local_Extended_Features(Packet):
+    name = "Read Local Extended Features"
+    fields_desc = [ByteField("page", 0x00)]
+
+
+class HCI_Cmd_Read_Local_Version_Information(Packet):
+    """
+    Read Local Version Information HCI Command
+    """
+    name = "Read Local Version Information"
+
+
 class HCI_Event_Hdr(Packet):
     name = "HCI Event header"
     fields_desc = [XByteField("code", 0),
@@ -1099,9 +1171,11 @@ class HCI_Event_Hdr(Packet):
 
 class HCI_Event_Connect_Complete(Packet):
     name = "Connect Complete"
-    fields_desc = [ByteField("status", 0),
+    fields_desc = [ByteEnumField("status", 0, _bluetooth_error_codes),
                    LEShortField("handle", 0x0100),
-                   LEMACField("bd_addr", None), ]
+                   LEMACField("bd_addr", None),
+                   ByteField("link_type", 0x00),
+                   ByteField("encryption_enabled", 0x00)]
 
 
 class HCI_Event_Disconnection_Complete(Packet):
@@ -1113,7 +1187,7 @@ class HCI_Event_Disconnection_Complete(Packet):
 
 class HCI_Event_Remote_Name_Request_Complete(Packet):
     name = "Remote Name Request Complete"
-    fields_desc = [ByteField("status", 0),
+    fields_desc = [ByteEnumField("status", 0, _bluetooth_error_codes),
                    LEMACField("bd_addr", None),
                    StrFixedLenField("remote_name", b"\x00", 248), ]
 
@@ -1140,7 +1214,7 @@ class HCI_Event_Command_Complete(Packet):
 
 class HCI_Cmd_Complete_Read_BD_Addr(Packet):
     name = "Read BD Addr"
-    fields_desc = [LEMACField("addr", None), ]
+    fields_desc = [LEMACField("bd_addr", None)]
 
 
 class HCI_Cmd_Complete_LE_Read_White_List_Size(Packet):
@@ -1165,6 +1239,159 @@ class HCI_Event_Command_Status(Packet):
 class HCI_Event_Number_Of_Completed_Packets(Packet):
     name = "Number Of Completed Packets"
     fields_desc = [ByteField("number", 0)]
+
+
+class HCI_Event_Read_Remote_Supported_Features_Complete(Packet):
+    """
+    Read Remote Supported Features Complete HCI Event
+    """
+    name = "Read Remote Supported Features Complete"
+    fields_desc = [ByteEnumField("status", 0, _bluetooth_error_codes),
+                   LEShortField("handle", 0),
+                   BTLMPFeaturesField("lmp_features", 0)]
+
+
+class HCI_Event_Read_Remote_Extended_Features_Complete(Packet):
+    """
+    Read Remote Extended Features Complete HCI Event
+    """
+    name = "Read Remote Extended Features Complete"
+    fields_desc = [
+        ByteEnumField("status", 0, {0: "success"}),
+        LEShortField("handle", 0),
+        ByteField("page", 0x00),
+        ByteField("max_page", 0x00),
+        XLELongField("extended_features", 0)]
+
+
+class HCI_Event_IO_Capability_Response(Packet):
+    """
+    IO Capability Response HCI Event
+    """
+    name = "IO Capability Response Event"
+    fields_desc = [
+        LEMACField("bd_addr", None),
+        ByteField("io_capability", 0x00),
+        ByteField("oob_data_present", 0x00),
+        ByteField("authentication_requirements", 0x00)]
+
+
+class HCI_Event_Read_Remote_Version_Information_Complete(Packet):
+    """
+    Read Remote Version Information Complete HCI Event
+    """
+    name = "Read Remote Version Information Event"
+    fields_desc = [
+        ByteField("status", 0x00),
+        LEShortField("handle", 0x0000),
+        ByteField("version", 0x00),
+        LEShortField("manufacturer_name", 0x0000),
+        LEShortField("subversion", 0x0000)]
+
+
+class HCI_Event_Inquiry_Result(Packet):
+    """
+    Inquiry Result HCI Event
+    """
+    name = "HCI Inquiry Result Event"
+    fields_desc = [
+        ByteField("num_response", 0x00),
+        FieldListField("bd_addr", None, LEMACField,
+                       count_from=lambda p: p.num_response),
+        FieldListField("page_scan_repetition_mode", None, ByteField,
+                       count_from=lambda p: p.num_response),
+        FieldListField("reserved", None, LEShortField,
+                       count_from=lambda p: p.num_response),
+        FieldListField("device_class", None, LEX3BytesField,
+                       count_from=lambda p: p.num_response),
+        FieldListField("clock_offset", None, LEShortField,
+                       count_from=lambda p: p.num_response)]
+
+
+class HCI_Event_Inquiry_Result_With_Rssi(Packet):
+    """
+    Inquiry Result with RSSI HCI Event
+    """
+    name = "HCI Inquiry Result with RSSI Event"
+    fields_desc = [
+        ByteField("num_response", 0x00),
+        FieldListField("bd_addr", None, LEMACField,
+                       count_from=lambda p: p.num_response),
+        FieldListField("page_scan_repetition_mode", None, ByteField,
+                       count_from=lambda p: p.num_response),
+        FieldListField("reserved", None, LEShortField,
+                       count_from=lambda p: p.num_response),
+        FieldListField("device_class", None, LEX3BytesField,
+                       count_from=lambda p: p.num_response),
+        FieldListField("clock_offset", None, LEShortField,
+                       count_from=lambda p: p.num_response),
+        FieldListField("rssi", None, SignedByteField,
+                       count_from=lambda p: p.num_response)]
+
+
+class HCI_Event_Extended_Inquiry_Result(Packet):
+    """
+    Extended Inquiry Result HCI Event
+    """
+    name = "HCI Inquiry Result Event"
+    fields_desc = [
+        ByteField("num_response", 0x01),
+        LEMACField("bd_addr", None),
+        ByteField("page_scan_repetition_mode", 0x00),
+        ByteField("reserved", 0x00),
+        LEX3BytesField("device_class", 0x000000),
+        LEShortField("clock_offset", 0x0000),
+        SignedByteField("rssi", 0x00),
+        PacketListField("eir_data", [], EIR_Hdr,
+                        length_from=lambda pkt: pkt.underlayer.len - 15)
+    ]
+
+
+class HCI_Event_Inquiry_Complete(Packet):
+    """
+    Inquiry Complete HCI Event
+    """
+    name = "HCI Inquiry Complete Event"
+    fields_desc = [
+        ByteEnumField("status", 0, _bluetooth_error_codes)
+    ]
+
+
+class HCI_Cmd_Complete_Read_Local_Name(Packet):
+    name = "Read Local Name"
+    fields_desc = [StrFixedLenField("name", b"\x00", length=248)]
+
+
+class HCI_Cmd_Complete_Read_Local_Extended_Features(Packet):
+    """
+    Read Local Extended Features Complete HCI Event
+    """
+    name = "Read Local Extended Features Complete"
+    fields_desc = [
+        ByteField("page", 0x00),
+        ByteField("max_page", 0x00),
+        XLELongField("extended_features", 0)]
+
+
+class HCI_Cmd_Complete_Read_Local_Version_Information(Packet):
+    """
+    Read Local Version Information HCI Command Complete Event
+    """
+    name = "Read Local Version Information"
+    fields_desc = [
+        ByteField("hci_version", 0),
+        LEShortField("hci_revision", 0),
+        ByteField("lmp_pal_version", 0),
+        LEShortField("manufacturer_name", 0),
+        LEShortField("lmp_pal_subversion", 0)]
+
+
+class HCI_Event_Link_Key_Request(Packet):
+    """
+    Link Key Request HCI Event
+    """
+    name = "Link Key Request Event"
+    fields_desc = [LEMACField("bd_addr", None)]
 
 
 class HCI_Event_LE_Meta(Packet):
@@ -1285,6 +1512,15 @@ bind_layers(HCI_Command_Hdr, HCI_Cmd_LE_Read_Remote_Used_Features, opcode=0x2016
 bind_layers(HCI_Command_Hdr, HCI_Cmd_LE_Start_Encryption_Request, opcode=0x2019)  # noqa: E501
 bind_layers(HCI_Command_Hdr, HCI_Cmd_LE_Long_Term_Key_Request_Reply, opcode=0x201a)  # noqa: E501
 bind_layers(HCI_Command_Hdr, HCI_Cmd_LE_Long_Term_Key_Request_Negative_Reply, opcode=0x201b)  # noqa: E501
+bind_layers(HCI_Command_Hdr, HCI_Cmd_Read_Remote_Supported_Features, opcode=0x041b)
+bind_layers(HCI_Command_Hdr, HCI_Cmd_Read_Remote_Extended_Features, opcode=0x001c)
+bind_layers(HCI_Command_Hdr, HCI_Cmd_Read_Remote_Version_Information, opcode=0x041d)
+bind_layers(HCI_Command_Hdr, HCI_Cmd_Inquiry, opcode=0x0401)
+bind_layers(HCI_Command_Hdr, HCI_Cmd_Write_Scan_Enable, opcode=0x0c1a)
+bind_layers(HCI_Command_Hdr, HCI_Cmd_Read_Local_Name, opcode=0x0c14)
+bind_layers(HCI_Command_Hdr, HCI_Cmd_Write_Class_Of_Device, opcode=0x0c24)
+bind_layers(HCI_Command_Hdr, HCI_Cmd_Read_Local_Extended_Features, opcode=0x1004)
+bind_layers(HCI_Command_Hdr, HCI_Cmd_Read_Local_Version_Information, opcode=0x1001)
 
 bind_layers(HCI_Event_Hdr, HCI_Event_Connect_Complete, code=0x03)
 bind_layers(HCI_Event_Hdr, HCI_Event_Disconnection_Complete, code=0x05)
@@ -1294,9 +1530,21 @@ bind_layers(HCI_Event_Hdr, HCI_Event_Command_Complete, code=0x0e)
 bind_layers(HCI_Event_Hdr, HCI_Event_Command_Status, code=0x0f)
 bind_layers(HCI_Event_Hdr, HCI_Event_Number_Of_Completed_Packets, code=0x13)
 bind_layers(HCI_Event_Hdr, HCI_Event_LE_Meta, code=0x3e)
+bind_layers(HCI_Event_Hdr, HCI_Event_Read_Remote_Supported_Features_Complete, code=0x0b)
+bind_layers(HCI_Event_Hdr, HCI_Event_Read_Remote_Extended_Features_Complete, code=0x23)
+bind_layers(HCI_Event_Hdr, HCI_Event_IO_Capability_Response, code=0x32)
+bind_layers(HCI_Event_Hdr, HCI_Event_Read_Remote_Version_Information_Complete, code=0x0c)
+bind_layers(HCI_Event_Hdr, HCI_Event_Inquiry_Result, code=0x02)
+bind_layers(HCI_Event_Hdr, HCI_Event_Inquiry_Result_With_Rssi, code=0x22)
+bind_layers(HCI_Event_Hdr, HCI_Event_Extended_Inquiry_Result, code=0x2f)
+bind_layers(HCI_Event_Hdr, HCI_Event_Inquiry_Complete, code=0x01)
+bind_layers(HCI_Event_Hdr, HCI_Event_Link_Key_Request, code=0x17)
 
 bind_layers(HCI_Event_Command_Complete, HCI_Cmd_Complete_Read_BD_Addr, opcode=0x1009)  # noqa: E501
 bind_layers(HCI_Event_Command_Complete, HCI_Cmd_Complete_LE_Read_White_List_Size, opcode=0x200f)  # noqa: E501
+bind_layers(HCI_Event_Command_Complete, HCI_Cmd_Complete_Read_Local_Name, opcode=0x0c14)  # noqa: E501
+bind_layers(HCI_Event_Command_Complete, HCI_Cmd_Complete_Read_Local_Extended_Features, opcode=0x1004)
+bind_layers(HCI_Event_Command_Complete, HCI_Cmd_Complete_Read_Local_Version_Information, opcode=0x1001)
 
 bind_layers(HCI_Event_LE_Meta, HCI_LE_Meta_Connection_Complete, event=1)
 bind_layers(HCI_Event_LE_Meta, HCI_LE_Meta_Advertising_Reports, event=2)

@@ -3949,3 +3949,103 @@ class MSBExtendedField(BitExtendedField):
     def __init__(self, name, default):
         # type: (str, Optional[Any]) -> None
         BitExtendedField.__init__(self, name, default, extension_bit=7)
+
+
+class BTLMPFeaturesField(FlagsField):
+    '''
+    Defines the first LMP features page as a bit field
+    '''
+
+    def __init__(self, name, default):
+        super().__init__(
+            name, default, -64, [
+                '3_slot_packets',
+                '5_slot_packets',
+                'encryption',
+                'slot_offset',
+                'timing_accuracy',
+                'role_switch',
+                'hold_mode',
+                'sniff_mode',
+                'park_mode',
+                'power_control_requests',
+                'channel_quality_driven_data_rate',
+                'sco_link',
+                'hv2_packets',
+                'hv3_packets',
+                'u_law_log_synchronous_data',
+                'a_law_log_synchronous_data',
+                'cvsd_synchronous_data',
+                'paging_parameter_negotiation',
+                'power_control',
+                'transparent_synchronous_data',
+                'flow_control_lag_4_bit0',
+                'flow_control_lag_4_bit1',
+                'flow_control_lag_4_bit2',
+                'broadband_encryption',
+                'cvsd_synchronous_data',
+                'edr_acl_2_mbps_mode',
+                'edr_acl_3_mbps_mode',
+                'enhanced_inquiry_scan',
+                'interlaced_inquiry_scan',
+                'interlaced_page_scan',
+                'rssi_with_inquiry_results',
+                'ev3_packets',
+                'ev4_packets',
+                'ev5_packets',
+                'reserved',
+                'afh_capable_slave',
+                'afh_classification_slave',
+                'br_edr_not_supported',
+                'le_supported_controller',
+                '3_slot_edr_acl_packets',
+                '5_slot_edr_acl_packets',
+                'sniff_subrating',
+                'pause_encryption',
+                'afh_capable_master',
+                'afh_classification_master',
+                'edr_esco_2_mbps_mode',
+                'edr_esco_3_mbps_mode',
+                '3_slot_edr_esco_packets',
+                'extended_inquiry_response',
+                'simultaneous_le_and_br_edr_to_same_device_capable_controller',
+                'reserved2',
+                'secure_simple_pairing',
+                'encapsulated_pdu',
+                'erroneous_data_reporting',
+                'non_flushable_packet_boundary_flag',
+                'reserved3',
+                'link_supervision_timeout_changed_event',
+                'inquiry_tx_power_level',
+                'enhanced_power_control',
+                'reserved4_bit0',
+                'reserved4_bit1',
+                'reserved4_bit2',
+                'reserved4_bit3',
+                'extended_features'
+            ]
+        )
+
+
+class BTMajorServiceClassField(FlagsField):
+    '''
+    Defines the Major Service Classes field of the Class of Device EIR as a bit
+    field
+    '''
+
+    def __init__(self, name, default):
+        super().__init__(
+            name, default, -11, [
+                'limited_discoverable_mode',
+                'le_audio',
+                'reserved',
+                'positioning',
+                'networking',
+                'rendering',
+                'capturing',
+                'object_transfer',
+                'audio',
+                'telephony',
+                'information'
+            ]
+        )
