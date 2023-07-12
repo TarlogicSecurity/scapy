@@ -20,6 +20,7 @@ from scapy.config import conf
 from scapy.data import DLT_BLUETOOTH_HCI_H4, DLT_BLUETOOTH_HCI_H4_WITH_PHDR
 from scapy.packet import bind_layers, Packet
 from scapy.fields import (
+    BTMajorServiceClassField,
     BitField,
     ByteEnumField,
     ByteField,
@@ -40,13 +41,13 @@ from scapy.fields import (
     StrLenField,
     UUIDField,
     XByteField,
+    XLEIntField,
     XLELongField,
     XStrLenField,
     XLEShortField,
     LEMACField,
     BTLMPFeaturesField,
     LEX3BytesField,
-    LEIntField,
 )
 from scapy.supersocket import SuperSocket
 from scapy.sendrecv import sndrcv
@@ -746,6 +747,19 @@ class EIR_IncompleteList16BitServiceUUIDs(EIR_CompleteList16BitServiceUUIDs):
     name = "Incomplete list of 16-bit service UUIDs"
 
 
+class EIR_CompleteList32BitServiceUUIDs(EIR_Element):
+    name = 'Complete list of 32-bit service UUIDs'
+    fields_desc = [
+        # https://www.bluetooth.com/specifications/assigned-numbers
+        FieldListField('svc_uuids', None, XLEIntField('uuid', 0),
+                       length_from=EIR_Element.length_from)
+    ]
+
+
+class EIR_IncompleteList32BitServiceUUIDs(EIR_CompleteList32BitServiceUUIDs):
+    name = 'Incomplete list of 32-bit service UUIDs'
+
+
 class EIR_CompleteList128BitServiceUUIDs(EIR_Element):
     name = "Complete list of 128-bit service UUIDs"
     fields_desc = [
@@ -773,6 +787,45 @@ class EIR_ShortenedLocalName(EIR_CompleteLocalName):
 class EIR_TX_Power_Level(EIR_Element):
     name = "TX Power Level"
     fields_desc = [SignedByteField("level", 0)]
+
+
+class EIR_ClassOfDevice(EIR_Element):
+    name = "Class of device"
+    fields_desc = [
+        BitField("fixed", 0b00, 2),
+        BitField("minor_device_class", 0, 6),
+        BitField("major_device_class", 0, 5),
+        BTMajorServiceClassField("major_service_classes", 0)
+    ]
+
+
+class EIR_SecureSimplePairingHashC192(EIR_Element):
+    name = "Secure Simple Pairing Hash C-192"
+    fields_desc = [NBytesField("hash", 0, 16)]
+
+
+class EIR_SecureSimplePairingRandomizerR192(EIR_Element):
+    name = "Secure Simple Pairing Randomizer R-192"
+    fields_desc = [NBytesField("randomizer", 0, 16)]
+
+
+class EIR_SecurityManagerOOBFlags(EIR_Element):
+    name = "Security Manager Out of Band Flags"
+    fields_desc = [
+        BitField("oob_flags_field", 0, 1),
+        BitField("le_supported", 0, 1),
+        BitField("previously_used", 0, 1),
+        BitField("address_type", 0, 1),
+        BitField("reserved", 0, 4)
+    ]
+
+
+class EIR_PeripheralConnectionIntervalRange(EIR_Element):
+    name = "Peripheral Connection Interval Range"
+    fields_desc = [
+        LEShortField("conn_interval_min", 0xFFFF),
+        LEShortField("conn_interval_max", 0xFFFF)
+    ]
 
 
 class EIR_Manufacturer_Specific_Data(EIR_Element):
@@ -854,12 +907,29 @@ class EIR_ServiceData16BitUUID(EIR_Element):
     fields_desc = [
         # https://www.bluetooth.com/specifications/assigned-numbers/16-bit-uuids-for-members
         XLEShortField("svc_uuid", None),
+        StrLenField("service_data", b"", length_from=EIR_Element.length_from)
     ]
 
     def extract_padding(self, s):
         # Needed to end each EIR_Element packet and make PacketListField work.
         plen = EIR_Element.length_from(self) - 2
         return s[:plen], s[plen:]
+
+
+class EIR_ServiceData32BitUUID(EIR_Element):
+    name = "EIR Service Data - 32-bit UUID"
+    fields_desc = [
+        XLEIntField("svc_uuid", None),
+        StrLenField("service_data", b"", length_from=EIR_Element.length_from)
+    ]
+
+
+class EIR_ServiceData128BitUUID(EIR_Element):
+    name = "EIR Service Data - 128-bit UUID"
+    fields_desc = [
+        UUIDField("svc_uuid", None, uuid_fmt=UUIDField.FORMAT_REV),
+        StrLenField("service_data", b"", length_from=EIR_Element.length_from)
+    ]
 
 
 class HCI_Command_Hdr(Packet):
@@ -1554,13 +1624,22 @@ bind_layers(HCI_Event_LE_Meta, HCI_LE_Meta_Long_Term_Key_Request, event=5)
 bind_layers(EIR_Hdr, EIR_Flags, type=0x01)
 bind_layers(EIR_Hdr, EIR_IncompleteList16BitServiceUUIDs, type=0x02)
 bind_layers(EIR_Hdr, EIR_CompleteList16BitServiceUUIDs, type=0x03)
+bind_layers(EIR_Hdr, EIR_CompleteList32BitServiceUUIDs, type=0x05)
+bind_layers(EIR_Hdr, EIR_IncompleteList32BitServiceUUIDs, type=0x04)
 bind_layers(EIR_Hdr, EIR_IncompleteList128BitServiceUUIDs, type=0x06)
 bind_layers(EIR_Hdr, EIR_CompleteList128BitServiceUUIDs, type=0x07)
 bind_layers(EIR_Hdr, EIR_ShortenedLocalName, type=0x08)
 bind_layers(EIR_Hdr, EIR_CompleteLocalName, type=0x09)
 bind_layers(EIR_Hdr, EIR_Device_ID, type=0x10)
 bind_layers(EIR_Hdr, EIR_TX_Power_Level, type=0x0a)
+bind_layers(EIR_Hdr, EIR_ClassOfDevice, type=0x0d)
+bind_layers(EIR_Hdr, EIR_SecureSimplePairingHashC192, type=0x0e)
+bind_layers(EIR_Hdr, EIR_SecureSimplePairingRandomizerR192, type=0x0f)
+bind_layers(EIR_Hdr, EIR_SecurityManagerOOBFlags, type=0x11)
+bind_layers(EIR_Hdr, EIR_PeripheralConnectionIntervalRange, type=0x12)
 bind_layers(EIR_Hdr, EIR_ServiceData16BitUUID, type=0x16)
+bind_layers(EIR_Hdr, EIR_ServiceData32BitUUID, type=0x20)
+bind_layers(EIR_Hdr, EIR_ServiceData128BitUUID, type=0x21)
 bind_layers(EIR_Hdr, EIR_Manufacturer_Specific_Data, type=0xff)
 bind_layers(EIR_Hdr, EIR_Raw)
 
