@@ -20,15 +20,19 @@ from scapy.config import conf
 from scapy.data import DLT_BLUETOOTH_HCI_H4, DLT_BLUETOOTH_HCI_H4_WITH_PHDR
 from scapy.packet import bind_layers, Packet
 from scapy.fields import (
+    BitEnumField,
     BitField,
     ByteEnumField,
     ByteField,
+    ConditionalField,
     FieldLenField,
     FieldListField,
     FlagsField,
     IntField,
+    LEIntField,
     LEShortEnumField,
     LEShortField,
+    LEThreeBytesField,
     LenField,
     MultipleTypeField,
     NBytesField,
@@ -41,6 +45,7 @@ from scapy.fields import (
     StrNullField,
     UUIDField,
     XByteField,
+    XLEIntField,
     XLELongField,
     XStrLenField,
     XLEShortField,
@@ -81,6 +86,36 @@ class HCI_PHDR_Hdr(Packet):
 
 
 # Real layers
+
+_bluetooth_vendor_broadcom_diagnostic_type = {
+    0x00: "LM sent",
+    0x01: "LM received",
+    0x03: "Memory Access Response to Peek",
+    0x04: "Memory Hex Dump Response",
+    0x0a: "Reported Completed Test",
+    0x11: "Memory Access Response to Poke",
+    0x15: "CPU Load",
+    0x16: "Basic Rate ACL Stats Data",
+    0x17: "EDR ACL Stats Data",
+    0x18: "Received Aux Response",
+    0x1a: "ACL Stats Data (Type 0x1A)",
+    0x1b: "ACL Stats Data (Type 0x1B)",
+    0x1f: "Get Connection Response",
+    0x80: "LE LM Sent",
+    0x81: "LE LM Received",
+    0xb9: "Reset Basic Rate ACL Stats",
+    0xc1: "Get Basic Rate ACL Stats",
+    0xc2: "Get EDR ACL Stats",
+    0xc3: "Get Aux Stats",
+    0xc5: "Get ACL Stats (Type 0x1A)",
+    0xc6: "Get ACL Stats (Type 0x1B)",
+    0xcf: "Get Connection Stats",
+    0xf0: "Toggle LMP Logging",
+    0xf1: "Memory Peek",
+    0xf2: "Memory Poke",
+    0xf3: "Memory Hex Dump",
+    0xf6: "BTMMstr_BBPktTest",
+}
 
 _bluetooth_packet_types = {
     0: "Acknowledgement",
@@ -189,28 +224,28 @@ _att_error_codes = {
 
 
 class BT_Mon_Hdr(Packet):
-    '''
+    """
     Bluetooth Linux Monitor Transport Header
-    '''
-    name = 'Bluetooth Linux Monitor Transport Header'
+    """
+    name = "Bluetooth Linux Monitor Transport Header"
     fields_desc = [
-        LEShortField('opcode', None),
-        LEShortField('adapter_id', None),
-        LEShortField('len', None)
+        LEShortField("opcode", None),
+        LEShortField("adapter_id", None),
+        LEShortField("len", None)
     ]
 
 
 class BT_Mon_New_Index(Packet):
-    '''
+    """
     Bluetooth Linux Monitor Transport New Index Packet
-    '''
-    name = 'Bluetooth Linux Monitor Transport New Index Packet'
+    """
+    name = "Bluetooth Linux Monitor Transport New Index Packet"
     fields_desc = [
-        ByteEnumField('bus', 0, {
+        ByteEnumField("bus", 0, {
             0x00: "BR/EDR",
             0x01: "AMP"
         }),
-        ByteEnumField('type', 0, {
+        ByteEnumField("type", 0, {
             0x00: "Virtual",
             0x01: "USB",
             0x02: "PC Card",
@@ -219,50 +254,128 @@ class BT_Mon_New_Index(Packet):
             0x05: "PCI",
             0x06: "SDIO"
         }),
-        LEMACField('addr', None),
-        StrFixedLenField('name', None, 8)
+        LEMACField("addr", None),
+        StrFixedLenField("name", None, 8)
     ]
 
 
 class BT_Mon_Delete_Index(Packet):
-    '''
+    """
     Bluetooth Linux Monitor Transport Delete Index Packet
-    '''
-    name = 'Bluetooth Linux Monitor Transport Delete Index Packet'
+    """
+    name = "Bluetooth Linux Monitor Transport Delete Index Packet"
 
 
 class BT_Mon_Open_Index(Packet):
-    '''
+    """
     Bluetooth Linux Monitor Transport Open Index Packet
-    '''
-    name = 'Bluetooth Linux Monitor Transport Open Index Packet'
+    """
+    name = "Bluetooth Linux Monitor Transport Open Index Packet"
 
 
 class BT_Mon_Close_Index(Packet):
-    '''
+    """
     Bluetooth Linux Monitor Transport Close Index Packet
-    '''
-    name = 'Bluetooth Linux Monitor Transport Close Index Packet'
+    """
+    name = "Bluetooth Linux Monitor Transport Close Index Packet"
 
 
 class BT_Mon_Index_Info(Packet):
-    '''
+    """
     Bluetooth Linux Monitor Transport Index Info Packet
-    '''
-    name = 'Bluetooth Linux Monitor Transport Index Info Packet'
+    """
+    name = "Bluetooth Linux Monitor Transport Index Info Packet"
     fields_desc = [
-        LEMACField('addr', None),
-        XLEShortField('manufacturer', None)
+        LEMACField("addr", None),
+        XLEShortField("manufacturer", None)
     ]
 
 
 class BT_Mon_System_Note(Packet):
-    '''
+    """
     Bluetooth Linux Monitor Transport System Note Packet
-    '''
-    name = 'Bluetooth Linux Monitor Transport System Note Packet'
+    """
+    name = "Bluetooth Linux Monitor Transport System Note Packet"
     fields_desc = [
-        StrNullField('note', None)
+        StrNullField("note", None)
+    ]
+
+
+class BCM_Vendor_Diagnostic_Hdr(Packet):
+    """
+    Bluetooth Broadcom Vendor Diagnostic Packet Header
+    """
+    name = "Bluetooth Broadcom Vendor Diagnostic Packet Header"
+    fields_desc = [
+        ByteEnumField("type", None, _bluetooth_vendor_broadcom_diagnostic_type)
+    ]
+
+
+class BCM_Vendor_Diagnostic_Lmp_Header(Packet):
+    """
+    Bluetooth Broadcom Vendor Diagnostic LMP Packet Header
+    """
+    name = "Bluetooth Broadcom Vendor Diagnostic LMP Packet Header"
+    fields_desc = [
+        XLEIntField("clock", None),
+        XLEIntField("mac_low", None),
+        ConditionalField(LEThreeBytesField("padding", None),
+                         lambda packet: packet.underlayer.type == 0x01)
+    ]
+
+
+class BT_DM1_Hdr(Packet):
+    """
+    Bluetooth DM1 Header
+    """
+    name = "Bluetooth DM1 Packet Header"
+    fields_desc = [
+        BitField("len", None, -5),
+        BitField("flow", None, 1),
+        BitEnumField("llid", None, -2, {
+            0x00: "Reserved",
+            0x01: "Continuation fragment of an L2CAP message (ACL-U)",
+            0x02: "Start of an L2CAP message or no fragmentation (ACL-U)",
+            0x03: "LMP message (ACL-C)"
+        })
+    ]
+
+
+class LMP_Hdr(Packet):
+    """
+    LMP Message Header
+    """
+    name = "LMP message header"
+    fields_desc = [
+        BitField("opcode", None, -7),
+        BitField("tid", None, 1)
+    ]
+
+
+class LMP_au_rand(Packet):
+    """
+    LMP au_rand Message
+    """
+    name = "LMP au rand message"
+    fields_desc = [NBytesField("random_number", None, 16)]
+
+
+class LMP_sres(Packet):
+    """
+    LMP sres Message
+    """
+    name = "LMP sres message"
+    fields_desc = [LEIntField("authentication_response", None)]
+
+
+class LMP_not_accepted(Packet):
+    """
+    LMP not_accepted Message
+    """
+    name = "LMP not accepted message"
+    fields_desc = [
+        ByteField("opcode", None),
+        ByteField("error", None)
     ]
 
 
@@ -1335,6 +1448,21 @@ class HCI_LE_Meta_Long_Term_Key_Request(Packet):
                    XLEShortField("ediv", 0), ]
 
 
+
+class HCI_Vendor_Broadcom_Hdr(Packet):
+    name = "HCI Broadcom Vendor header"
+    fields_desc = [
+        ByteField("opcode", 0)
+    ]
+
+
+class HCI_Vendor_Broadcom_Set_Diagnostic_Logging(Packet):
+    name = "HCI Broadcom Vendor Set Diagnostic Logging"
+    fields_desc = [
+        ByteField("enable", 0x00)
+    ]
+
+
 # https://elixir.bootlin.com/linux/v6.4.2/source/include/net/bluetooth/hci_mon.h#L34
 bind_layers(BT_Mon_Hdr, BT_Mon_New_Index, opcode=0)
 bind_layers(BT_Mon_Hdr, BT_Mon_Delete_Index, opcode=1)
@@ -1344,12 +1472,22 @@ bind_layers(BT_Mon_Hdr, BT_Mon_Open_Index, opcode=8)
 bind_layers(BT_Mon_Hdr, BT_Mon_Close_Index, opcode=9)
 bind_layers(BT_Mon_Hdr, BT_Mon_Index_Info, opcode=10)
 bind_layers(BT_Mon_Hdr, BT_Mon_System_Note, opcode=12)
+bind_layers(BT_Mon_Hdr, BCM_Vendor_Diagnostic_Hdr, opcode=11)
+
+bind_layers(BCM_Vendor_Diagnostic_Hdr, BCM_Vendor_Diagnostic_Lmp_Header, type=0x00)
+bind_layers(BCM_Vendor_Diagnostic_Hdr, BCM_Vendor_Diagnostic_Lmp_Header, type=0x01)
+bind_layers(BCM_Vendor_Diagnostic_Lmp_Header, BT_DM1_Hdr)
+bind_layers(BT_DM1_Hdr, LMP_Hdr, llid=3)
+bind_layers(LMP_Hdr, LMP_au_rand, opcode=11)
+bind_layers(LMP_Hdr, LMP_sres, opcode=12)
+bind_layers(LMP_Hdr, LMP_not_accepted, opcode=4)
 
 bind_layers(HCI_PHDR_Hdr, HCI_Hdr)
 
 bind_layers(HCI_Hdr, HCI_Command_Hdr, type=1)
 bind_layers(HCI_Hdr, HCI_ACL_Hdr, type=2)
 bind_layers(HCI_Hdr, HCI_Event_Hdr, type=4)
+bind_layers(HCI_Hdr, HCI_Vendor_Broadcom_Hdr, type=7)
 bind_layers(HCI_Hdr, conf.raw_layer,)
 
 conf.l2types.register(DLT_BLUETOOTH_HCI_H4, HCI_Hdr)
@@ -1405,6 +1543,8 @@ bind_layers(HCI_Event_LE_Meta, HCI_LE_Meta_Connection_Complete, event=1)
 bind_layers(HCI_Event_LE_Meta, HCI_LE_Meta_Advertising_Reports, event=2)
 bind_layers(HCI_Event_LE_Meta, HCI_LE_Meta_Connection_Update_Complete, event=3)
 bind_layers(HCI_Event_LE_Meta, HCI_LE_Meta_Long_Term_Key_Request, event=5)
+
+bind_layers(HCI_Vendor_Broadcom_Hdr, HCI_Vendor_Broadcom_Set_Diagnostic_Logging, opcode=0xf0)
 
 bind_layers(EIR_Hdr, EIR_Flags, type=0x01)
 bind_layers(EIR_Hdr, EIR_IncompleteList16BitServiceUUIDs, type=0x02)
